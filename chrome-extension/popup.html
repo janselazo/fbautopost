@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>DealerPost Pro</title>
+  <style>
+    /* Dark theme matching the app */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 320px;
+      min-height: 200px;
+      background: #0f0f0f;
+      color: #f0f0f0;
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      padding: 16px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #222;
+    }
+    .logo {
+      width: 32px; height: 32px;
+      background: #d4a017;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900; font-size: 14px; color: #000;
+    }
+    .title { font-size: 14px; font-weight: 600; }
+    .subtitle { font-size: 11px; color: #666; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; }
+    .dot-green { background: #22c55e; }
+    .dot-yellow { background: #eab308; animation: pulse 1.5s infinite; }
+    .dot-red { background: #ef4444; }
+    @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.4 } }
+    .status-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 12px;
+      background: #1a1a1a;
+      border-radius: 8px;
+      border: 1px solid #222;
+      margin-bottom: 12px;
+      font-size: 12px;
+    }
+    .btn {
+      width: 100%; padding: 10px;
+      border: none; border-radius: 8px;
+      font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn-primary { background: #d4a017; color: #000; }
+    .btn-primary:hover { background: #e8b520; }
+    .btn-outline { background: transparent; color: #666; border: 1px solid #333; margin-top: 8px; }
+    .btn-outline:hover { color: #f0f0f0; border-color: #555; }
+    .btn-messages {
+      width: 100%; padding: 10px 14px;
+      background: #ef444418; border: 1px solid #ef444444;
+      border-radius: 8px; color: #ef4444;
+      font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+      display: flex; align-items: center; justify-content: space-between;
+      text-decoration: none; margin-bottom: 8px;
+    }
+    .btn-messages:hover { background: #ef444428; }
+    .btn-messages .msg-badge {
+      background: #ef4444; color: #fff;
+      border-radius: 20px; padding: 1px 7px;
+      font-size: 11px; font-weight: 700;
+    }
+    .pairing-section { margin-bottom: 12px; }
+    .pairing-label { font-size: 11px; color: #666; margin-bottom: 6px; }
+    .code-input {
+      width: 100%; padding: 10px 12px;
+      background: #1a1a1a; border: 1px solid #333;
+      border-radius: 8px; color: #f0f0f0;
+      font-size: 18px; font-weight: 700; letter-spacing: 6px;
+      text-align: center;
+    }
+    .code-input::placeholder { color: #444; letter-spacing: 2px; font-weight: 400; font-size: 13px; }
+    .vehicle-card {
+      background: #1a1a1a;
+      border: 1px solid #222;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .vehicle-title { font-size: 13px; font-weight: 600; color: #f0f0f0; }
+    .vehicle-meta { font-size: 11px; color: #666; margin-top: 3px; }
+    .vehicle-price { font-size: 16px; font-weight: 700; color: #d4a017; margin-top: 6px; }
+    .tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600;
+    }
+    .tag-green { background: #22c55e22; color: #22c55e; border: 1px solid #22c55e44; }
+    .tag-yellow { background: #eab30822; color: #eab308; border: 1px solid #eab30844; }
+    .section-title { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .server-input-group { display: flex; gap: 6px; margin-bottom: 12px; }
+    .server-input {
+      flex: 1; padding: 8px 10px;
+      background: #1a1a1a; border: 1px solid #333;
+      border-radius: 6px; color: #f0f0f0; font-size: 12px;
+    }
+    .btn-sm { padding: 8px 12px; border-radius: 6px; font-size: 12px; white-space: nowrap; }
+    .divider { height: 1px; background: #222; margin: 12px 0; }
+    .help-text { font-size: 11px; color: #555; line-height: 1.5; }
+    #error-msg { font-size: 11px; color: #ef4444; margin-top: 6px; display: none; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">DP</div>
+    <div>
+      <div class="title">DealerPost Pro</div>
+      <div class="subtitle">Auto-fill Facebook Marketplace</div>
+    </div>
+  </div>
+
+  <!-- Not Paired View -->
+  <div id="view-unpaired">
+    <div class="status-bar">
+      <div class="status-dot dot-red"></div>
+      <span style="color:#ef4444">Not paired — enter your code below</span>
+    </div>
+    <div class="pairing-section">
+      <div class="pairing-label">Server URL (leave blank for auto-detect)</div>
+      <div class="server-input-group">
+        <input class="server-input" id="server-url-input" placeholder="https://your-backend.vibecode.run" />
+        <button class="btn btn-primary btn-sm" id="save-server-btn">Save</button>
+      </div>
+      <div class="pairing-label">Enter the 6-digit pairing code from Settings &rarr; Extension</div>
+      <input class="code-input" id="pairing-code-input" maxlength="6" placeholder="000000" inputmode="numeric" pattern="[0-9]*" />
+      <div id="error-msg"></div>
+    </div>
+    <button class="btn btn-primary" id="pair-btn">Pair Extension</button>
+  </div>
+
+  <!-- Paired / Ready View -->
+  <div id="view-paired" style="display:none">
+    <div class="status-bar" id="status-bar-ready">
+      <div class="status-dot dot-green"></div>
+      <span style="color:#22c55e" id="status-text">Ready &mdash; waiting for posts</span>
+    </div>
+    <!-- Unread messages banner -->
+    <div id="unread-banner" style="display:none">
+      <a id="open-inbox-btn" class="btn-messages" href="#" target="_blank">
+        <span id="unread-label">New messages from buyers</span>
+        <span class="msg-badge" id="unread-badge">0</span>
+      </a>
+    </div>
+
+    <div id="pending-vehicle" style="display:none"></div>
+    <button class="btn btn-primary" id="post-now-btn" style="display:none">
+      Open FB Marketplace &amp; Auto-Fill
+    </button>
+    <div class="divider"></div>
+    <div class="help-text">
+      Go to your DealerPost dashboard, click <strong style="color:#d4a017">"Post to FB"</strong> on any vehicle, then click the button above to auto-fill the listing.<br><br>
+      The extension also monitors your Facebook Marketplace messages and imports them to your dashboard automatically.
+    </div>
+    <button class="btn btn-outline" id="unpair-btn">Disconnect</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

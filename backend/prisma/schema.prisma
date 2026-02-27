@@ -1,0 +1,173 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  vehicles      Vehicle[]
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Vehicle {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  year        Int
+  make        String
+  model       String
+  trim        String
+  price       Int
+  mileage     Int
+  color       String
+  vin         String
+  condition   String
+  bodyType    String
+  status      String   @default("Available")
+  description String?
+  photoUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ExtensionPairing {
+  id        String   @id
+  userId    String
+  code      String   @unique
+  paired    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}
+
+model PostingSession {
+  id          String   @id
+  userId      String
+  vehicleId   Int
+  status      String   @default("pending")
+  vehicleData String
+  postText    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Conversation {
+  id            String    @id @default(cuid())
+  userId        String
+  buyerName     String
+  buyerFbId     String?
+  buyerPhone    String?
+  buyerEmail    String?
+  vehicle       String
+  vehiclePrice  String?
+  listingUrl    String?
+  intentScore   Int       @default(0)
+  status        String    @default("new")
+  crmStatus     String    @default("new_lead")
+  pendingReply  String?
+  lastMessageAt DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  messages      Message[]
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  direction      String
+  body           String
+  source         String       @default("fb_marketplace")
+  intentScore    Int          @default(0)
+  createdAt      DateTime     @default(now())
+}
+
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+  stripePriceId        String?
+  plan                 String    @default("starter")   // starter | pro | dealer
+  billingCycle         String    @default("monthly")   // monthly | annual
+  status               String    @default("inactive")  // active | inactive | past_due | canceled
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean   @default(false)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}
+
+model Appointment {
+  id             String   @id @default(cuid())
+  userId         String
+  conversationId String?
+  buyerName      String
+  buyerPhone     String?
+  vehicle        String
+  scheduledAt    DateTime
+  notes          String?
+  status         String   @default("scheduled") // scheduled | attended | cancelled | no_show
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Lead {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  email     String?
+  phone     String?
+  vehicle   String?
+  tag       String   @default("new")  // new | hot | warm | cold | lost | converted
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

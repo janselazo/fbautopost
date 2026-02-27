@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "DealerPost Pro",
+  "version": "1.2.0",
+  "description": "Auto-fill Facebook Marketplace listings and bridge buyer conversations to your DealerPost dashboard.",
+  "permissions": [
+    "storage",
+    "tabs",
+    "activeTab",
+    "scripting",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://www.facebook.com/*",
+    "https://www.messenger.com/*",
+    "https://*.vibecodeapp.com/*",
+    "https://*.vibecode.run/*",
+    "https://*.vibecode.dev/*",
+    "http://localhost:3000/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "DealerPost Pro",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.facebook.com/marketplace/*",
+        "https://www.facebook.com/messages/*",
+        "https://www.facebook.com/messages/t/*",
+        "https://m.facebook.com/messages/*",
+        "https://www.messenger.com/*",
+        "https://www.messenger.com/t/*"
+      ],
+      "js": ["inbox.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
