@@ -12,6 +12,134 @@ function getApiKey(): string {
   return key;
 }
 
+export function isMarketCheckConfigured(): boolean {
+  const key = env.MARKETCHECK_API_KEY;
+  return Boolean(key && key !== "your_marketcheck_api_key_here");
+}
+
+export type MarketCompsListing = {
+  price: number;
+  miles: number;
+  dealer: { name: string; city: string };
+  dom_active: number;
+  year?: number;
+  make?: string;
+  model?: string;
+  trim?: string;
+  is_certified?: boolean;
+};
+export type MarketCompsData = {
+  num_found: number;
+  stats: { price: { mean: number; median: number; min: number; max: number }; miles: { mean: number } };
+  listings: MarketCompsListing[];
+};
+
+/** Fetch market comps for a vehicle (used by /comps and by market analyze-one). Returns null if not configured or on error. */
+export async function fetchMarketComps(params: {
+  year: number;
+  make: string;
+  model: string;
+  trim?: string;
+  radius?: number;
+  latitude?: number;
+  longitude?: number;
+  rows?: number;
+}): Promise<MarketCompsData | null> {
+  try {
+    const apiParams: Record<string, string | number | undefined> = {
+      year: String(params.year),
+      make: params.make,
+      model: params.model,
+      car_type: "used",
+      rows: params.rows ?? 3,
+      start: 0,
+      stats: "price,miles",
+      sort_by: "dist",
+      sort_order: "asc",
+    };
+    if (params.trim?.trim()) apiParams.trim = params.trim.trim();
+    const radiusMiles = params.radius ?? 100;
+    apiParams.radius = radiusMiles;
+    // MarketCheck requires lat/long or zip for radius to apply; use US default so radius works
+    const lat = params.latitude ?? 34.05;
+    const lng = params.longitude ?? -118.25;
+    apiParams.latitude = lat;
+    apiParams.longitude = lng;
+
+    const data = await mcFetch("/search/car/active", apiParams) as {
+      num_found?: number;
+      listings?: Record<string, unknown>[];
+      stats?: {
+        price?: { mean?: number; median?: number; min?: number; max?: number };
+        miles?: { mean?: number };
+      };
+    };
+
+    const numFound = data?.num_found ?? 0;
+    const priceStats = data?.stats?.price ?? {};
+    const milesStats = data?.stats?.miles ?? {};
+    const build = (l: Record<string, unknown>) => (l.build ?? {}) as Record<string, unknown>;
+    let listings = (Array.isArray(data?.listings) ? data.listings : []).map((l: Record<string, unknown>) => {
+      const dealer = (l.dealer ?? l.mc_dealership ?? {}) as Record<string, unknown>;
+      const b = build(l);
+      return {
+        price: Number(l.price ?? l.dealer_price ?? l.sale_price ?? l.internet_price ?? l.list_price ?? 0),
+        miles: Number(l.miles ?? 0),
+        dealer: { name: String(dealer.name ?? "Unknown"), city: String(dealer.city ?? "") },
+        dom_active: Number(l.dom_active ?? l.dom ?? 0),
+        year: Number(b.year ?? l.year ?? 0) || undefined,
+        make: String(b.make ?? l.make ?? "").trim() || undefined,
+        model: String(b.model ?? l.model ?? "").trim() || undefined,
+        trim: String(b.trim ?? l.trim ?? "").trim() || undefined,
+        is_certified: Boolean(l.is_certified),
+      };
+    });
+
+    // Restrict to same make and (when requested) same trim so we only show true comparables
+    const makeLower = params.make.trim().toLowerCase();
+    const trimFilter = params.trim?.trim().toLowerCase();
+    listings = listings.filter((l) => {
+      const sameMake = (l.make ?? "").toLowerCase() === makeLower;
+      if (!sameMake) return false;
+      if (trimFilter) {
+        const listingTrim = (l.trim ?? "").toLowerCase();
+        return listingTrim === trimFilter || listingTrim.includes(trimFilter) || trimFilter.includes(listingTrim);
+      }
+      return true;
+    });
+
+    const withPrice = listings.filter((l) => l.price > 0);
+    const prices = withPrice.map((l) => l.price);
+    const milesList = withPrice.map((l) => l.miles);
+    const mean = (arr: number[]) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
+    const sortedPrices = [...prices].sort((a, b) => a - b);
+    const mid = Math.floor(sortedPrices.length / 2);
+    const medianPrice = sortedPrices.length
+      ? sortedPrices.length % 2
+        ? sortedPrices[mid]
+        : (sortedPrices[mid - 1] + sortedPrices[mid]) / 2
+      : 0;
+
+    return {
+      num_found: listings.length,
+      stats: {
+        price: {
+          mean: mean(prices) || priceStats.mean ?? 0,
+          median: medianPrice || priceStats.median ?? 0,
+          min: prices.length ? Math.min(...prices) : priceStats.min ?? 0,
+          max: prices.length ? Math.max(...prices) : priceStats.max ?? 0,
+        },
+        miles: { mean: mean(milesList) || milesStats.mean ?? 0 },
+      },
+      listings,
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "";
+    if (msg === "MARKETCHECK_QUOTA_EXHAUSTED") throw err;
+    return null;
+  }
+}
+
 // ── Helper: fetch from MarketCheck ──────────────────────────────────────────
 async function mcFetch(path: string, params: Record<string, string | number | undefined>): Promise<unknown> {
   const apiKey = getApiKey();
@@ -101,7 +229,95 @@ function normalizeListing(l: Record<string, unknown>) {
   };
 }
 
+/** VIN decode via MarketCheck Basic VIN Decoder; returns { year, make, model, trim } or null. */
+export async function decodeVin(vin: string): Promise<{ year: number; make: string; model: string; trim: string } | null> {
+  const cleanVin = vin.trim().toUpperCase();
+  if (cleanVin.length !== 17) return null;
+  let apiKey: string;
+  try {
+    apiKey = getApiKey();
+  } catch {
+    throw new Error("MARKETCHECK_NOT_CONFIGURED");
+  }
+  const url = new URL(`${MC_BASE}/decode/car/${encodeURIComponent(cleanVin)}/specs`);
+  url.searchParams.set("api_key", apiKey);
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), { headers: { Accept: "application/json" } });
+  } catch (e) {
+    console.error("[MarketCheck VIN decode] Network error", e);
+    throw new Error("VIN decode request failed. Is the backend able to reach api.marketcheck.com?");
+  }
+  if (res.status === 429) throw new Error("MARKETCHECK_QUOTA_EXHAUSTED");
+  if (res.status === 401) throw new Error("MARKETCHECK_DECODE_401");
+  if (res.status === 403) throw new Error("MARKETCHECK_DECODE_403");
+  const text = await res.text();
+  if (!res.ok) {
+    console.error("[MarketCheck VIN decode]", res.status, text.slice(0, 400));
+    throw new Error(`MarketCheck decode ${res.status}: ${text.slice(0, 200)}`);
+  }
+  let data: Record<string, unknown>;
+  try {
+    data = JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    console.error("[MarketCheck VIN decode] Invalid JSON", text.slice(0, 200));
+    return null;
+  }
+  // Basic VIN Decoder returns flat: year, make, model, trim (docs.marketcheck.com)
+  const year = Number(data.year ?? (data.build as Record<string, unknown>)?.year ?? 0);
+  const make = String(data.make ?? (data.build as Record<string, unknown>)?.make ?? "").trim();
+  const model = String(data.model ?? (data.build as Record<string, unknown>)?.model ?? "").trim();
+  const trim = String(data.trim ?? (data.build as Record<string, unknown>)?.trim ?? "").trim();
+  if (!year || !make || !model) {
+    const valid = data.is_valid === false ? " (VIN invalid or not decodable)" : "";
+    console.error("[MarketCheck VIN decode] Missing year/make/model", data);
+    throw new Error(`Could not decode VIN${valid}. Check VIN format.`);
+  }
+  return { year, make, model, trim: trim || "Base" };
+}
+
 export const marketcheckRouter = new Hono();
+
+/**
+ * GET /api/marketcheck/vin-decode?vin=XXXXXXXXXXXXXXX
+ * Decode 17-char VIN to year, make, model, trim (MarketCheck basic decode).
+ */
+marketcheckRouter.get("/vin-decode", async (c) => {
+  const vin = c.req.query("vin") ?? "";
+  if (!vin.trim()) {
+    return c.json({ error: { message: "vin (17 characters) is required", code: "MISSING_VIN" } }, 400);
+  }
+  if (vin.trim().length !== 17) {
+    return c.json({ error: { message: "VIN must be 17 characters", code: "INVALID_VIN" } }, 400);
+  }
+  try {
+    const decoded = await decodeVin(vin);
+    if (!decoded) {
+      return c.json({ error: { message: "Could not decode VIN. Check format or try again.", code: "DECODE_FAILED" } }, 422);
+    }
+    return c.json({ data: decoded });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    if (message === "MARKETCHECK_NOT_CONFIGURED") {
+      return c.json({ error: { message: "MarketCheck API key not configured. Add MARKETCHECK_API_KEY=your_key to backend/.env and restart the backend.", code: "MARKETCHECK_NOT_CONFIGURED" } }, 503);
+    }
+    if (message === "MARKETCHECK_QUOTA_EXHAUSTED") {
+      return c.json({ error: { message: "MarketCheck API quota exhausted.", code: "MARKETCHECK_QUOTA_EXHAUSTED" } }, 503);
+    }
+    if (message === "MARKETCHECK_DECODE_401") {
+      return c.json({ error: { message: "MarketCheck API key invalid or missing (401). Check MARKETCHECK_API_KEY in backend/.env.", code: "MARKETCHECK_DECODE_401" } }, 503);
+    }
+    if (message === "MARKETCHECK_DECODE_403") {
+      return c.json({ error: { message: "MarketCheck API key does not have access to VIN decode (403). Check your MarketCheck plan.", code: "MARKETCHECK_DECODE_403" } }, 503);
+    }
+    // Include message so user sees "Could not decode VIN. Check VIN format." or MarketCheck error
+    const userMessage = message.startsWith("MarketCheck decode") || message.startsWith("Could not decode") || message.startsWith("VIN decode request failed")
+      ? message
+      : "VIN decode failed. Check backend logs.";
+    console.error("[MarketCheck /vin-decode]", message);
+    return c.json({ error: { message: userMessage, code: "DECODE_FAILED" } }, 422);
+  }
+});
 
 /**
  * GET /api/marketcheck/lookup
@@ -168,7 +384,7 @@ marketcheckRouter.get("/lookup", async (c) => {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     if (message === "MARKETCHECK_NOT_CONFIGURED") {
-      return c.json({ error: { message: "MarketCheck API key not configured. Add MARKETCHECK_API_KEY in the ENV tab.", code: "MARKETCHECK_NOT_CONFIGURED" } }, 503);
+      return c.json({ error: { message: "MarketCheck API key not configured. Add MARKETCHECK_API_KEY=your_key to backend/.env and restart the backend.", code: "MARKETCHECK_NOT_CONFIGURED" } }, 503);
     }
     console.error("[MarketCheck /lookup]", message);
     return c.json({ error: { message, code: "MARKETCHECK_ERROR" } }, 502);
@@ -236,7 +452,7 @@ marketcheckRouter.get("/inventory", async (c) => {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     if (message === "MARKETCHECK_NOT_CONFIGURED") {
-      return c.json({ error: { message: "MarketCheck API key not configured.", code: "MARKETCHECK_NOT_CONFIGURED" } }, 503);
+      return c.json({ error: { message: "MarketCheck API key not configured. Add MARKETCHECK_API_KEY=your_key to backend/.env and restart the backend.", code: "MARKETCHECK_NOT_CONFIGURED" } }, 503);
     }
     console.error("[MarketCheck /inventory]", message);
     return c.json({ error: { message, code: "MARKETCHECK_ERROR" } }, 502);
@@ -245,92 +461,50 @@ marketcheckRouter.get("/inventory", async (c) => {
 
 /**
  * GET /api/marketcheck/comps
- * Get market comparables (stats only, no listings) for a vehicle model.
- * Query: year, make, model, latitude (opt), longitude (opt), radius (default 100)
- *
- * NOTE: We fetch stats only (no listings rows) to conserve API quota.
+ * Get market comparables for a vehicle model.
+ * Query: year, make, model, trim (opt), latitude (opt), longitude (opt), radius (default 100), rows (default 50)
  */
 marketcheckRouter.get("/comps", async (c) => {
   const year = c.req.query("year");
   const make = c.req.query("make");
   const model = c.req.query("model");
+  const trim = c.req.query("trim");
   const latitude = c.req.query("latitude");
   const longitude = c.req.query("longitude");
   const radius = Number(c.req.query("radius") ?? "100");
+  const rows = Math.min(100, Math.max(1, Number(c.req.query("rows") ?? "50")));
 
   if (!year || !make || !model) {
     return c.json({ error: { message: "year, make, and model are required", code: "MISSING_PARAMS" } }, 400);
   }
 
   try {
-    const params: Record<string, string | number | undefined> = {
-      year,
+    const data = await fetchMarketComps({
+      year: Number(year),
       make,
       model,
-      car_type: "used",
-      rows: 3,       // Fetch 3 competitor listings + stats
-      start: 0,
-      stats: "price,miles",
-      sort_by: "price",
-      sort_order: "asc",
-    };
-    if (latitude && longitude) {
-      params.latitude = latitude;
-      params.longitude = longitude;
-      params.radius = radius;
-    }
-
-    const data = await mcFetch("/search/car/active", params) as {
-      num_found?: number;
-      listings?: Record<string, unknown>[];
-      stats?: {
-        price?: { mean?: number; median?: number; min?: number; max?: number };
-        miles?: { mean?: number };
-      };
-    };
-
-    const numFound = data?.num_found ?? 0;
-    const priceStats = data?.stats?.price ?? {};
-    const milesStats = data?.stats?.miles ?? {};
-
-    // Map competitor listings to { price, miles, dealer }
-    const competitors = (Array.isArray(data?.listings) ? data.listings : []).map((l: Record<string, unknown>) => {
-      const dealer = (l.dealer ?? l.mc_dealership ?? {}) as Record<string, unknown>;
-      return {
-        price: Number(l.price ?? 0),
-        miles: Number(l.miles ?? 0),
-        dealer: { name: String(dealer.name ?? "Unknown"), city: String(dealer.city ?? "") },
-        dom_active: Number(l.dom_active ?? l.dom ?? 0),
-      };
+      trim: trim || undefined,
+      radius,
+      rows,
+      latitude: latitude ? Number(latitude) : undefined,
+      longitude: longitude ? Number(longitude) : undefined,
     });
-
+    if (!data) {
+      return c.json({ error: { message: "MarketCheck API key not configured. Add MARKETCHECK_API_KEY=your_key to backend/.env and restart the backend.", code: "MARKETCHECK_NOT_CONFIGURED" } }, 503);
+    }
     return c.json({
       data: {
-        num_found: numFound,
-        stats: {
-          price: {
-            mean: priceStats.mean ?? 0,
-            median: priceStats.median ?? 0,
-            min: priceStats.min ?? 0,
-            max: priceStats.max ?? 0,
-          },
-          miles: {
-            mean: milesStats.mean ?? 0,
-          },
-        },
-        listings: competitors,
+        num_found: data.num_found,
+        stats: data.stats,
+        listings: data.listings,
       },
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    if (message === "MARKETCHECK_NOT_CONFIGURED") {
-      return c.json({ error: { message: "MarketCheck API key not configured.", code: "MARKETCHECK_NOT_CONFIGURED" } }, 503);
-    }
     if (message === "MARKETCHECK_QUOTA_EXHAUSTED") {
       return c.json({ data: null, quota_exhausted: true });
     }
     console.error("[MarketCheck /comps]", message);
-    // Return null data on comp failure — scoring engine handles null gracefully
     return c.json({ data: null });
   }
 });

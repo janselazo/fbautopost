@@ -2,6 +2,49 @@
 
 A premium dealership CRM tool that helps car salesmen manage their vehicle inventory and auto-generate posts for Facebook Marketplace, Facebook Groups, and Craigslist.
 
+## Local development (Cursor)
+
+To run the app locally (e.g. in Cursor) and connect to your own backend:
+
+**Prerequisites**
+
+- Open the terminal and go to the **project root** (the folder that contains both `backend` and `webapp`). For example:
+  ```bash
+  cd /Users/janse/Documents/GitHub/fbautopost
+  ```
+  Or in Cursor: **File → Open Folder** and choose the `fbautopost` folder, then open the terminal there.
+- **Bun** is required. If you see `command not found: bun`, install it (macOS/Linux):
+  ```bash
+  curl -fsSL https://bun.sh/install | bash
+  ```
+  Then close and reopen the terminal (or run `source ~/.zshrc`). Check with `bun --version`.
+
+1. **Clone and install** — From the repo root, run `bun install` in both `backend/` and `webapp/`. Then run `bun install` once in the repo root (for the `dev` script).
+2. **Environment** — Copy `backend/.env.example` to `backend/.env` and `webapp/.env.example` to `webapp/.env`. Fill in your Supabase URL, anon key, and JWT secret (see [Authentication](#authentication)); add optional keys for MarketCheck, Stripe, or OpenAI as needed.
+3. **Start both servers** — From the **repo root** run:
+   ```bash
+   bun run dev
+   ```
+   This starts the backend (port 3000) and webapp (port 8000) in one terminal. Or start them in two terminals: from `backend/` run `bun run dev`, then from `webapp/` run `bun run dev`.
+4. **Open the app** — In your browser go to **http://localhost:8000**. The app will use the local backend via the Vite proxy; no need to set `VITE_BACKEND_URL` for local dev.
+
+**Troubleshooting: "vite: command not found" or "localhost refused to connect"**
+
+If the webapp fails to start (e.g. `vite: command not found` in the terminal), the webapp dependencies are not installed. Install them, then start again:
+
+```bash
+cd /Users/janse/Documents/GitHub/fbautopost/webapp
+bun install
+cd /Users/janse/Documents/GitHub/fbautopost
+bun run dev
+```
+
+Ensure you have run `bun install` in **both** `backend/` and `webapp/` at least once (and in the repo root for the `dev` script).
+
+## Pushing to GitHub
+
+Commit and push as usual. Do **not** commit `.env` (it is in `.gitignore`). Use `.env.example` as a template; each developer or clone creates their own `.env` from it. If `.env` was ever committed in the past, rotate any exposed secrets (Supabase, Stripe, API keys) and remove the file from the repo (e.g. `git rm --cached backend/.env webapp/.env` then commit).
+
 ## Authentication
 
 The app uses **Supabase** for authentication (frontend and backend).
@@ -13,7 +56,7 @@ The app uses **Supabase** for authentication (frontend and backend).
 ### Adding the Supabase JWT Secret
 1. Go to your Supabase Dashboard → Project Settings → API
 2. Copy the **JWT Secret** value
-3. Add it to the backend ENV tab: `SUPABASE_JWT_SECRET=<your-jwt-secret>`
+3. Add it to `backend/.env`: `SUPABASE_JWT_SECRET=<your-jwt-secret>`
 
 ## MarketCheck Dealership Integration
 
@@ -21,7 +64,7 @@ The "Connect Inventory" module pulls real dealership inventory and market compar
 
 ### Setup
 1. Get a MarketCheck API key at [marketcheck.com](https://www.marketcheck.com/api/)
-2. Add `MARKETCHECK_API_KEY=your_key_here` in the **ENV tab** on Vibecode
+2. Add `MARKETCHECK_API_KEY=your_key_here` to `backend/.env` (or your ENV tab if using Vibecode)
 3. Go to **Connect Inventory** in the app and search for your dealership
 
 ### How It Works

@@ -14,6 +14,7 @@ import {
   CalendarDays,
   UserPlus,
 } from 'lucide-react';
+import { VehicleComparisonIcon } from '@/components/icons/VehicleComparisonIcon';
 import { cn } from '@/lib/utils';
 import type { ActiveView } from './types';
 import { useDealer } from '../../context/DealerContext';
@@ -46,7 +47,7 @@ const navGroups: NavGroup[] = [
     items: [
       { view: 'connect-inventory', label: 'Inventory', icon: Car },
       { view: 'sold', label: 'Sold Vehicles', icon: BadgeDollarSign },
-      { view: 'analytics', label: 'Analytics', icon: BarChart3 },
+      { view: 'market-intelligence', label: 'Vehicle Comparison', icon: VehicleComparisonIcon },
     ],
   },
   {
@@ -54,6 +55,7 @@ const navGroups: NavGroup[] = [
     items: [
       { view: 'composer', label: 'Post Vehicle', icon: Send },
       { view: 'history', label: 'Post History', icon: Clock },
+      { view: 'analytics', label: 'Analytics', icon: BarChart3 },
     ],
   },
   {

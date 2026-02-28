@@ -17,8 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { AppointmentModal } from './AppointmentModal';
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
+import { getBackendUrl } from '@/lib/backend-url';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -287,6 +286,7 @@ function EditableField({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function CrmView() {
+  const BACKEND_URL = getBackendUrl();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [drawerConv, setDrawerConv] = useState<Conversation | null>(null);
   const [drawerMessages, setDrawerMessages] = useState<Message[]>([]);

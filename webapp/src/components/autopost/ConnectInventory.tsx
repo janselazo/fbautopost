@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useDealership, type DealershipVehicle } from "./DealershipContext";
 import type { ActiveView } from "./types";
 import { api } from "@/lib/api";
+import { getBackendUrl } from "@/lib/backend-url";
 
 // ═══════════════════════════════════════════════════════════════
 // CAR Posting — CONNECT INVENTORY MODULE
@@ -107,12 +108,10 @@ function delay(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "";
-
 const API = {
   // Look up dealer by website domain — returns a single Dealer object
   lookupDealer: async (source: string): Promise<Dealer> => {
-    const res = await fetch(`${BACKEND_URL}/api/marketcheck/lookup?source=${encodeURIComponent(source)}`);
+    const res = await fetch(`${getBackendUrl()}/api/marketcheck/lookup?source=${encodeURIComponent(source)}`);
     const json = await res.json();
     if (json.error?.code === "MARKETCHECK_NOT_CONFIGURED") throw new Error("marketcheck_not_configured");
     if (json.error?.code === "DEALER_NOT_FOUND") throw new Error(json.error.message);
@@ -121,7 +120,7 @@ const API = {
   },
 
   getDealerInventory: async (source: string): Promise<{ num_found: number; listings: VehicleListing[] }> => {
-    const res = await fetch(`${BACKEND_URL}/api/marketcheck/inventory?source=${encodeURIComponent(source)}&rows=200`);
+    const res = await fetch(`${getBackendUrl()}/api/marketcheck/inventory?source=${encodeURIComponent(source)}&rows=200`);
     const json = await res.json();
     if (json.error?.code === "MARKETCHECK_NOT_CONFIGURED") throw new Error("marketcheck_not_configured");
     if (!res.ok) throw new Error(json.error?.message || "Inventory fetch failed");
@@ -141,7 +140,7 @@ const API = {
       longitude: String(lng),
       radius: "100",
     });
-    const res = await fetch(`${BACKEND_URL}/api/marketcheck/comps?${params}`);
+    const res = await fetch(`${getBackendUrl()}/api/marketcheck/comps?${params}`);
     const json = await res.json().catch(() => ({}));
     if (json.quota_exhausted === true) {
       const err = new Error("quota_exhausted");

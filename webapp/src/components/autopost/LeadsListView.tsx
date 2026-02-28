@@ -25,8 +25,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
+import { getBackendUrl } from '@/lib/backend-url';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -125,6 +124,7 @@ interface LeadsListViewProps {
 }
 
 export function LeadsListView({ onNavigate }: LeadsListViewProps) {
+  const BACKEND_URL = getBackendUrl();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');

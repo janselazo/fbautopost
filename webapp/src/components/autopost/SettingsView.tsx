@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import { sampleFacebookGroups, craigslistRegions, type FacebookGroup } from './types';
 import { useSupabaseSession } from '@/lib/supabase-auth';
 import { supabase } from '@/lib/supabase';
+import { getBackendUrl } from '@/lib/backend-url';
 
 type SettingsTab = 'profile' | 'dealership' | 'integrations' | 'extension' | 'posting' | 'notifications' | 'plan';
 
@@ -611,7 +612,7 @@ function PlanTab() {
   const [loadingUpgrade, setLoadingUpgrade] = useState<string | null>(null);
   const [loadingPortal, setLoadingPortal] = useState(false);
 
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
+  const BACKEND_URL = getBackendUrl();
 
   useEffect(() => {
     fetch(`${BACKEND_URL}/api/billing/subscription`, { credentials: 'include' })

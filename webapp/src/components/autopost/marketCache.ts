@@ -1,6 +1,8 @@
 // Shared market analysis cache and fetch utility
 // Used by both VehicleDetailDrawer and the pre-warm hook in InventoryTable
 
+import { getBackendUrl } from "@/lib/backend-url";
+
 export interface MarketResult {
   id: number;
   label: 'HOT DEAL' | 'WORTH POSTING' | 'SKIP / REPRICE';
@@ -43,7 +45,7 @@ export async function fetchVehicleAnalysis(
   if (cached) return cached;
 
   try {
-    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || ''}/api/market/analyze-one`, {
+    const res = await fetch(`${getBackendUrl()}/api/market/analyze-one`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ vehicle, radiusMiles }),

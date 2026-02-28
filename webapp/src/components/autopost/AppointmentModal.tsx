@@ -5,8 +5,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
+import { getBackendUrl } from '@/lib/backend-url';
 
 export interface AppointmentModalProps {
   open: boolean;
@@ -281,7 +280,7 @@ export function AppointmentModal({
     };
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/appointments`, {
+      const res = await fetch(`${getBackendUrl()}/api/appointments`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

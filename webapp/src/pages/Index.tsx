@@ -14,6 +14,7 @@ import {
   Kanban,
   CalendarDays,
 } from 'lucide-react';
+import { VehicleComparisonIcon } from '@/components/icons/VehicleComparisonIcon';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Sidebar } from '@/components/autopost/Sidebar';
@@ -23,6 +24,7 @@ import { DashboardView } from '@/components/autopost/DashboardView';
 import { SoldView } from '@/components/autopost/SoldView';
 import { LeadsView } from '@/components/autopost/LeadsView';
 import { AnalyticsView } from '@/components/autopost/AnalyticsView';
+import { VehicleComparisonPage } from '@/components/autopost/VehicleComparisonPage';
 import { SupportView } from '@/components/autopost/SupportView';
 import { SettingsView } from '@/components/autopost/SettingsView';
 import { ConnectInventory } from '@/components/autopost/ConnectInventory';
@@ -36,11 +38,12 @@ import { sampleVehicles, samplePostHistory } from '@/components/autopost/types';
 
 const mobileNavItems: { view: ActiveView; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { view: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { view: 'analytics', label: 'Analytics', icon: BarChart3 },
   { view: 'connect-inventory', label: 'Inventory', icon: Car },
   { view: 'sold', label: 'Sold Vehicles', icon: BadgeDollarSign },
+  { view: 'market-intelligence', label: 'Vehicle Comparison', icon: VehicleComparisonIcon },
   { view: 'composer', label: 'Post to FB', icon: Send },
   { view: 'history', label: 'Post History', icon: Clock },
+  { view: 'analytics', label: 'Analytics', icon: BarChart3 },
   { view: 'leads-list', label: 'Leads', icon: Users },
   { view: 'leads', label: 'Conversations', icon: Users },
   { view: 'crm', label: 'CRM Board', icon: Kanban },
@@ -147,6 +150,11 @@ function IndexContent() {
           )}
           {activeView === 'analytics' && (
             <AnalyticsView vehicles={vehicles} />
+          )}
+          {activeView === 'market-intelligence' && (
+            <div data-view="vehicle-comparison" key="vehicle-comparison">
+              <VehicleComparisonPage vehicles={vehicles} />
+            </div>
           )}
           {activeView === 'sold' && (
             <SoldView vehicles={vehicles} />

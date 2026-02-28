@@ -16,8 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { AppointmentModal } from './AppointmentModal';
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
+import { getBackendUrl } from '@/lib/backend-url';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -239,6 +238,7 @@ function EditableField({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function LeadsView() {
+  const BACKEND_URL = getBackendUrl();
   const [conversations, setConversations] = useState<Conversation[]>(DEMO);
   const [selected, setSelected] = useState<Conversation | null>(DEMO[0]);
   const [messages, setMessages] = useState<Message[]>(DEMO[0].messages || []);

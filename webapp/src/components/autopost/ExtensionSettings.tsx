@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { Download, Puzzle, Copy, Check, RefreshCw, Chrome, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
+import { getBackendUrl } from '@/lib/backend-url';
 
 interface PairingCode {
   code: string;
@@ -11,6 +10,7 @@ interface PairingCode {
 }
 
 export function ExtensionSettings() {
+  const BACKEND_URL = getBackendUrl();
   const [pairingCode, setPairingCode] = useState<PairingCode | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -144,13 +144,13 @@ export function ExtensionSettings() {
               </p>
               <div className="flex items-center gap-2 bg-background border border-border rounded-lg p-2.5">
                 <code className="font-mono text-xs text-primary flex-1 break-all select-all">
-                  {BACKEND_URL || window.location.origin.replace(':8000', ':3000')}
+                  {BACKEND_URL || `${window.location.protocol}//${window.location.hostname}:3000`}
                 </code>
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={() => {
-                    const url = BACKEND_URL || window.location.origin.replace(':8000', ':3000');
+                    const url = BACKEND_URL || `${window.location.protocol}//${window.location.hostname}:3000`;
                     navigator.clipboard.writeText(url);
                     toast.success('Backend URL copied!');
                   }}

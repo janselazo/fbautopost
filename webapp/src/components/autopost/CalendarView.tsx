@@ -14,8 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
+import { getBackendUrl } from '@/lib/backend-url';
 
 interface Appointment {
   id: string;
@@ -60,6 +59,7 @@ function apptStatusBadge(status: Appointment['status']) {
 }
 
 export function CalendarView() {
+  const BACKEND_URL = getBackendUrl();
   const [appointments, setAppointments] = useState<Appointment[]>(DEMO_APPOINTMENTS);
   const [currentMonth, setCurrentMonth] = useState(() => {
     const d = new Date();

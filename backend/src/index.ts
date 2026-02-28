@@ -1,4 +1,7 @@
-import "@vibecodeapp/proxy"; // DO NOT REMOVE OTHERWISE VIBECODE PROXY WILL NOT WORK
+// Load Vibecode proxy when available (e.g. in Vibecode deployment). Ignore when running locally.
+void import("@vibecodeapp/proxy").catch(() => {});
+// Load backend/.env so MARKETCHECK_API_KEY etc. are set even when started from project root
+import "./load-env";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import "./env";

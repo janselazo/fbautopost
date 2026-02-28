@@ -38,6 +38,7 @@ export type ActiveView =
   | 'crm'
   | 'calendar'
   | 'analytics'
+  | 'market-intelligence'
   | 'support'
   | 'settings'
   | 'connect-inventory';

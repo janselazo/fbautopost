@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { getBackendUrl } from '@/lib/backend-url';
 import type { Vehicle } from './types';
 import { useDealer } from '../../context/DealerContext';
 
@@ -491,19 +492,19 @@ function VehicleCard({
       </div>
 
       {/* Section 5: Nearest Competitors */}
-      {result.nearestCompetitors.length > 0 ? (
+      {result.nearestCompetitors.filter(c => c.price > 0).length > 0 ? (
         <div className="px-4 pb-4 pt-3">
           <div className="text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-widest mb-3">
             NEAREST COMPETITORS
           </div>
           <hr className="border-border mb-3" />
           <div className="flex flex-col">
-            {result.nearestCompetitors.slice(0, 3).map((comp, idx) => (
+            {result.nearestCompetitors.filter(c => c.price > 0).slice(0, 3).map((comp, idx, arr) => (
               <div
                 key={idx}
                 className={cn(
                   'flex justify-between items-center py-2 border-b border-border/50',
-                  idx === Math.min(result.nearestCompetitors.length, 3) - 1 ? 'border-0' : ''
+                  idx === arr.length - 1 ? 'border-0' : ''
                 )}
               >
                 <span className="text-sm text-foreground/80">{comp.name}</span>
@@ -613,7 +614,7 @@ export function MarketScanner({ vehicles, compact = false, onViewFull }: MarketS
           return;
         }
 
-        const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || ''}/api/market/analyze-one`, {
+        const res = await fetch(`${getBackendUrl()}/api/market/analyze-one`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ vehicle, radiusMiles: radius }),
@@ -623,11 +624,14 @@ export function MarketScanner({ vehicles, compact = false, onViewFull }: MarketS
         if (res.ok && json.data?.result) {
           const result = json.data.result;
           analysisCache.set(cacheKey, result);
+          setError(null); // clear error when at least one request succeeds
           // Stream: add to results sorted by score as each one arrives
           setResults(prev => {
             const filtered = prev.filter(r => r.id !== result.id);
             return [...filtered, result].sort((a, b) => b.sellabilityScore - a.sellabilityScore);
           });
+        } else {
+          setError(json?.error?.message || `Analysis failed (${res.status}). Ensure the backend is running and MARKETCHECK_API_KEY is set in backend/.env.`);
         }
       });
 
@@ -726,10 +730,25 @@ export function MarketScanner({ vehicles, compact = false, onViewFull }: MarketS
         </div>
       )}
 
-      {/* Error */}
+      {/* Error — show backend/API message so we can debug */}
       {error !== null ? (
-        <div className="bg-red-500/10 border border-red-500/30 rounded p-3">
-          <p className="text-sm text-red-400">{error}</p>
+        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+          <p className="text-sm font-medium text-red-400 mb-1">Market Intelligence error</p>
+          <p className="text-sm text-red-300/90 break-words">{error}</p>
+          <p className="text-xs text-muted-foreground mt-2">
+            Backend: ensure it’s running on port 3000 and <code className="bg-black/20 px-1 rounded">MARKETCHECK_API_KEY</code> is in <code className="bg-black/20 px-1 rounded">backend/.env</code>. Restart the backend after changing .env.
+          </p>
+        </div>
+      ) : null}
+
+      {/* Empty state: finished loading but no results (e.g. all requests failed without setting error, or network issue) */}
+      {!isFirstLoad && !loading && results.length === 0 && availableVehicles.length > 0 ? (
+        <div className="rounded-lg border border-border bg-muted/20 p-6 text-center">
+          <Radar className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+          <p className="text-sm font-medium text-foreground">No analysis results</p>
+          <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+            The backend may be down or MarketCheck is not configured. Start the backend (port 3000), add <code className="bg-muted px-1 rounded">MARKETCHECK_API_KEY</code> to <code className="bg-muted px-1 rounded">backend/.env</code>, then refresh or change the radius to retry.
+          </p>
         </div>
       ) : null}
 

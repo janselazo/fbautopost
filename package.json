@@ -1,8 +1,12 @@
 {
+  "scripts": {
+    "dev": "concurrently -n backend,webapp \"cd backend && bun run dev\" \"cd webapp && bun run dev\""
+  },
   "dependencies": {
     "jszip": "^3.10.1"
   },
   "devDependencies": {
-    "@types/jszip": "^3.4.1"
+    "@types/jszip": "^3.4.1",
+    "concurrently": "^9.1.0"
   }
 }
