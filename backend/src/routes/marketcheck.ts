@@ -124,12 +124,12 @@ export async function fetchMarketComps(params: {
       num_found: listings.length,
       stats: {
         price: {
-          mean: mean(prices) || priceStats.mean ?? 0,
-          median: medianPrice || priceStats.median ?? 0,
-          min: prices.length ? Math.min(...prices) : priceStats.min ?? 0,
-          max: prices.length ? Math.max(...prices) : priceStats.max ?? 0,
+          mean: mean(prices) || (priceStats.mean ?? 0),
+          median: medianPrice || (priceStats.median ?? 0),
+          min: prices.length ? Math.min(...prices) : (priceStats.min ?? 0),
+          max: prices.length ? Math.max(...prices) : (priceStats.max ?? 0),
         },
-        miles: { mean: mean(milesList) || milesStats.mean ?? 0 },
+        miles: { mean: mean(milesList) || (milesStats.mean ?? 0) },
       },
       listings,
     };
