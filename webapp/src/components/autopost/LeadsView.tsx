@@ -399,7 +399,7 @@ export function LeadsView() {
       <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card shrink-0">
         <div>
           <h1 className="font-bebas text-3xl tracking-wider text-foreground leading-none">CONVERSATIONS</h1>
-          <p className="font-dm text-xs text-muted-foreground mt-0.5">Facebook Marketplace inbox — replies route back to Messenger via extension</p>
+          <p className="font-dm text-xs text-muted-foreground mt-0.5">AI replies + schedule appointments from Messenger</p>
         </div>
         <div className="flex items-center gap-3">
           {/* Stats chips */}
@@ -452,7 +452,7 @@ export function LeadsView() {
           <div className="flex-1 overflow-y-auto">
             {filtered.length === 0 && (
               <div className="flex flex-col items-center justify-center h-32 text-center px-4">
-                <p className="font-dm text-xs text-muted-foreground">No conversations</p>
+                <p className="font-dm text-xs text-muted-foreground">No conversations yet. Messages from Facebook Messenger will appear here when the extension is running.</p>
               </div>
             )}
             {filtered.map(conv => {

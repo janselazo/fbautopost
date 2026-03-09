@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import JSZip from "jszip";
 import { useQueryClient } from "@tanstack/react-query";
@@ -797,21 +797,26 @@ function VehicleCard({
   expanded,
   onToggle,
   onPost,
+  isSold: initialSold,
 }: {
   v: ScoredVehicle;
   expanded: boolean;
   onToggle: () => void;
   onPost: (v: ScoredVehicle) => void;
+  isSold: boolean;
 }) {
-  const [sold, setSold] = useState(false);
+  const [sold, setSold] = useState(initialSold);
   const [soldLoading, setSoldLoading] = useState(false);
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (initialSold) setSold(true);
+  }, [initialSold]);
 
   async function handleMarkSold(e: React.MouseEvent) {
     e.stopPropagation();
     setSoldLoading(true);
     try {
-      // Derive bodyType enum from MarketCheck body_type string
       const bodyMap: Record<string, string> = {
         sedan: "Sedan", suv: "SUV", truck: "Truck", coupe: "Coupe",
         van: "Van", minivan: "Van", convertible: "Convertible", pickup: "Truck",
@@ -820,7 +825,8 @@ function VehicleCard({
       const rawBody = (v.body_type || "").toLowerCase();
       const bodyType = bodyMap[rawBody] ?? "SUV";
 
-      await api.post('/api/vehicles', {
+      await api.patch('/api/vehicles/mark-sold', {
+        vin: v.vin || `VIN-${v.id}`,
         year: v.year || new Date().getFullYear(),
         make: v.make || "Unknown",
         model: v.model || "Unknown",
@@ -828,15 +834,11 @@ function VehicleCard({
         price: v.price || 0,
         mileage: v.miles || 0,
         color: v.exterior_color || "Unknown",
-        vin: v.vin || `VIN-${v.id}`,
-        condition: "Good",
         bodyType,
-        status: "Sold",
-        description: `Sold via inventory — ${v.year} ${v.make} ${v.model} ${v.trim}`.trim(),
         photoUrl: v.media?.photo_links?.[0] || null,
       });
       setSold(true);
-      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ["vehicles"] });
       toast.success(`${v.year} ${v.make} ${v.model} marked as sold!`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to mark as sold.");
@@ -1094,6 +1096,16 @@ export function ConnectInventory({ onConnected, showDashboard = true }: ConnectI
     "all"
   );
   const [modal, setModal] = useState<ScoredVehicle | null>(null);
+  const [soldVins, setSoldVins] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    api.get<Array<{ vin: string; status: string }>>("/api/vehicles").then((vehicles) => {
+      const vins = new Set(
+        vehicles.filter((v) => v.status === "Sold").map((v) => v.vin)
+      );
+      setSoldVins(vins);
+    }).catch(() => {});
+  }, []);
 
   const connectDealerHandler = useCallback(async (dealer: Dealer) => {
     try {
@@ -1484,6 +1496,7 @@ export function ConnectInventory({ onConnected, showDashboard = true }: ConnectI
                 expanded={expanded === v.id}
                 onToggle={() => setExpanded(expanded === v.id ? null : v.id)}
                 onPost={setModal}
+                isSold={soldVins.has(v.vin || "")}
               />
             ))}
           </div>

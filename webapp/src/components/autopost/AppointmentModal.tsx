@@ -269,33 +269,61 @@ export function AppointmentModal({
 
     setSubmitting(true);
     const scheduledAt = new Date(`${date}T${time}`).toISOString();
-
-    const payload = {
-      conversationId,
-      buyerName,
-      vehicle,
-      scheduledAt,
-      buyerPhone: phone || undefined,
-      notes: notes || undefined,
-    };
+    const baseUrl = getBackendUrl();
 
     try {
-      const res = await fetch(`${getBackendUrl()}/api/appointments`, {
+      const isRealConversation = !conversationId.startsWith('demo-');
+      if (isRealConversation) {
+        const res = await fetch(`${baseUrl}/api/conversations/${conversationId}/schedule-appointment`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            scheduledAt,
+            buyerPhone: phone || undefined,
+            notes: notes || undefined,
+            setPendingReply: true,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.data?.appointment) {
+          const appt = data.data.appointment;
+          const result: AppointmentResult = {
+            id: appt.id,
+            buyerName: appt.buyerName,
+            vehicle: appt.vehicle,
+            scheduledAt: appt.scheduledAt,
+            buyerPhone: appt.buyerPhone,
+            notes: appt.notes,
+            status: appt.status ?? 'scheduled',
+          };
+          toast.success(`Appointment set for ${formatFull(date, time)}. Confirmation ready to send on Messenger.`);
+          onScheduled?.(result);
+          onClose();
+          setSubmitting(false);
+          return;
+        }
+      }
+      const payload = {
+        conversationId: isRealConversation ? conversationId : undefined,
+        buyerName,
+        vehicle,
+        scheduledAt,
+        buyerPhone: phone || undefined,
+        notes: notes || undefined,
+      };
+      const res = await fetch(`${baseUrl}/api/appointments`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-
       const data = await res.json().catch(() => ({}));
       const result: AppointmentResult = data.data ?? {
         id: `local-${Date.now()}`,
         buyerName, vehicle, scheduledAt,
-        buyerPhone: phone || undefined,
-        notes: notes || undefined,
-        status: 'scheduled',
+        buyerPhone: phone || undefined, notes: notes || undefined, status: 'scheduled',
       };
-
       toast.success(`Appointment set for ${formatFull(date, time)}`);
       onScheduled?.(result);
       onClose();

@@ -75,6 +75,60 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 
+// ── Cookie transfer to backend for server-side automation ────────────────────
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'TRANSFER_FB_COOKIES') {
+    (async () => {
+      try {
+        const { paired, userId, serverUrl } = await chrome.storage.local.get(['paired', 'userId', 'serverUrl']);
+        if (!paired || !userId || !serverUrl) {
+          sendResponse({ error: 'Extension not paired' });
+          return;
+        }
+
+        const cookies = await chrome.cookies.getAll({ domain: '.facebook.com' });
+        if (!cookies || cookies.length === 0) {
+          sendResponse({ error: 'No Facebook cookies found. Please log in to Facebook first.' });
+          return;
+        }
+
+        // Convert Chrome cookie format to Playwright-compatible format
+        const playwrightCookies = cookies.map(c => ({
+          name: c.name,
+          value: c.value,
+          domain: c.domain,
+          path: c.path,
+          expires: c.expirationDate || -1,
+          httpOnly: c.httpOnly,
+          secure: c.secure,
+          sameSite: c.sameSite === 'no_restriction' ? 'None' : c.sameSite === 'lax' ? 'Lax' : 'Strict',
+        }));
+
+        const res = await fetch(`${serverUrl}/api/extension/transfer-session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId,
+            cookies: playwrightCookies,
+            userAgent: navigator.userAgent,
+          }),
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          sendResponse({ success: true, cookieCount: playwrightCookies.length });
+        } else {
+          sendResponse({ error: data?.error?.message || 'Transfer failed' });
+        }
+      } catch (e) {
+        sendResponse({ error: e.message || 'Transfer failed' });
+      }
+    })();
+    return true;
+  }
+  return false;
+});
+
 // ── Clear badge when popup is opened ────────────────────────────────────────
 chrome.action.onClicked.addListener(async () => {
   await chrome.storage.local.set({ unreadMessageCount: 0 });

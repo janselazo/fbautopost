@@ -6,16 +6,15 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import "./env";
 import { supabaseAuthMiddleware } from "./supabase-auth";
-import { sampleRouter } from "./routes/sample";
-import { marketRouter } from "./routes/market";
 import { vehicleRouter } from "./routes/vehicles";
 import { extensionRouter } from "./routes/extension";
 import { conversationsRouter } from "./routes/conversations";
-import { billingRouter } from "./routes/billing";
 import { marketcheckRouter } from "./routes/marketcheck";
 import { appointmentsRouter } from "./routes/appointments";
 import { leadsRouter } from "./routes/leads";
+import { automationRouter } from "./routes/automation";
 import { logger } from "hono/logger";
+import { startScheduler } from "./automation/scheduler";
 
 const app = new Hono();
 
@@ -43,13 +42,14 @@ app.use(
   "/api/extension/posting-session/:id/complete",
   cors({ origin: "*", credentials: false })
 );
+app.use(
+  "/api/extension/transfer-session",
+  cors({ origin: "*", credentials: false })
+);
 
 // Extension-facing conversation endpoints — called without credentials
 app.use("/api/conversations/:id/messages", cors({ origin: "*", credentials: false }));
 app.use("/api/conversations", cors({ origin: "*", credentials: false }));
-
-// Stripe webhook — called by Stripe servers, no credentials
-app.use("/api/billing/webhook", cors({ origin: "*", credentials: false }));
 
 app.use(
   "*",
@@ -76,17 +76,18 @@ app.get("/api/me", (c) => {
 });
 
 // Routes
-app.route("/api/sample", sampleRouter);
-app.route("/api/market", marketRouter);
 app.route("/api/vehicles", vehicleRouter);
 app.route("/api/extension", extensionRouter);
 app.route("/api/conversations", conversationsRouter);
-app.route("/api/billing", billingRouter);
 app.route("/api/marketcheck", marketcheckRouter);
 app.route("/api/appointments", appointmentsRouter);
 app.route("/api/leads", leadsRouter);
+app.route("/api/automation", automationRouter);
 
 const port = Number(process.env.PORT) || 3000;
+
+// Start the automation scheduler after a short delay to let the server boot
+setTimeout(() => startScheduler(), 3000);
 
 export default {
   port,

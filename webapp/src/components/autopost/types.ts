@@ -30,18 +30,14 @@ export interface CraigslistRegion {
 }
 export type ActiveView =
   | 'dashboard'
-  | 'composer'
-  | 'history'
-  | 'sold'
+  | 'onboarding'
+  | 'connect-inventory'
+  | 'listing-analytics'
   | 'leads-list'
   | 'leads'
-  | 'crm'
   | 'calendar'
-  | 'analytics'
-  | 'market-intelligence'
-  | 'support'
-  | 'settings'
-  | 'connect-inventory';
+  | 'dealer-logic'
+  | 'settings';
 
 export interface Vehicle {
   id: number;

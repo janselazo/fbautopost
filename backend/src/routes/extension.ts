@@ -158,4 +158,64 @@ extensionRouter.post(
   }
 );
 
+// POST /api/extension/transfer-session
+// Extension sends Facebook cookies for server-side Playwright automation
+extensionRouter.post(
+  "/transfer-session",
+  zValidator(
+    "json",
+    z.object({
+      userId: z.string().min(1),
+      cookies: z.array(z.object({
+        name: z.string(),
+        value: z.string(),
+        domain: z.string(),
+        path: z.string(),
+        expires: z.number().optional(),
+        httpOnly: z.boolean().optional(),
+        secure: z.boolean().optional(),
+        sameSite: z.enum(["Strict", "Lax", "None"]).optional(),
+      })),
+      userAgent: z.string().optional(),
+    })
+  ),
+  async (c) => {
+    const { userId, cookies, userAgent } = c.req.valid("json");
+
+    if (!cookies.length) {
+      return c.json({ error: { message: "No cookies provided" } }, 400);
+    }
+
+    // Check that we have essential FB cookies (c_user, xs)
+    const essential = cookies.filter(
+      (ck) => ck.name === "c_user" || ck.name === "xs" || ck.name === "datr"
+    );
+    if (essential.length < 2) {
+      return c.json(
+        { error: { message: "Missing essential Facebook cookies. Please log in to Facebook first." } },
+        400
+      );
+    }
+
+    await prisma.browserSession.upsert({
+      where: { userId },
+      create: {
+        userId,
+        cookies: JSON.stringify(cookies),
+        userAgent: userAgent || null,
+        valid: true,
+        lastUsedAt: new Date(),
+      },
+      update: {
+        cookies: JSON.stringify(cookies),
+        userAgent: userAgent || undefined,
+        valid: true,
+        lastUsedAt: new Date(),
+      },
+    });
+
+    return c.json({ data: { success: true, cookieCount: cookies.length } });
+  }
+);
+
 export { extensionRouter };
