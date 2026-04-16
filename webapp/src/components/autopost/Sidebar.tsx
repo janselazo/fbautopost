@@ -1,20 +1,16 @@
 import {
   LayoutDashboard,
   Car,
-  Send,
-  Clock,
-  BadgeDollarSign,
   Users,
-  BarChart3,
-  HelpCircle,
+  UserPlus,
   Settings,
+  Settings2,
   ChevronRight,
   LogOut,
-  Kanban,
   CalendarDays,
-  UserPlus,
+  Zap,
+  BarChart3,
 } from 'lucide-react';
-import { VehicleComparisonIcon } from '@/components/icons/VehicleComparisonIcon';
 import { cn } from '@/lib/utils';
 import type { ActiveView } from './types';
 import { useDealer } from '../../context/DealerContext';
@@ -37,41 +33,32 @@ type NavGroup = {
 
 const navGroups: NavGroup[] = [
   {
-    label: 'Overview',
+    label: 'Home',
     items: [
       { view: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { view: 'onboarding', label: 'Setup Wizard', icon: Zap },
     ],
   },
   {
-    label: 'Inventory',
+    label: 'Marketplace',
     items: [
       { view: 'connect-inventory', label: 'Inventory', icon: Car },
-      { view: 'sold', label: 'Sold Vehicles', icon: BadgeDollarSign },
-      { view: 'market-intelligence', label: 'Vehicle Comparison', icon: VehicleComparisonIcon },
+      { view: 'listing-analytics', label: 'Listing Analytics', icon: BarChart3 },
     ],
   },
   {
-    label: 'Marketing',
-    items: [
-      { view: 'composer', label: 'Post Vehicle', icon: Send },
-      { view: 'history', label: 'Post History', icon: Clock },
-      { view: 'analytics', label: 'Analytics', icon: BarChart3 },
-    ],
-  },
-  {
-    label: 'Sales',
+    label: 'Messenger',
     items: [
       { view: 'leads-list', label: 'Leads', icon: UserPlus },
-      { view: 'leads', label: 'Conversations', icon: Users, badge: 'New' },
-      { view: 'crm', label: 'Opportunities', icon: Kanban },
+      { view: 'leads', label: 'Conversations', icon: Users },
       { view: 'calendar', label: 'Appointments', icon: CalendarDays },
     ],
   },
   {
-    label: 'Account',
+    label: 'Automation',
     items: [
+      { view: 'dealer-logic', label: 'Dealer Logic', icon: Settings2 },
       { view: 'settings', label: 'Settings', icon: Settings },
-      { view: 'support', label: 'Support', icon: HelpCircle },
     ],
   },
 ];
@@ -207,7 +194,7 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
         {/* Version */}
         <div className="px-3 text-center">
           <span className="font-dm text-[10px] text-muted-foreground/40 tracking-wider">
-            v1.0 — DealerPost Pro
+            v1.0 — #1 Marketplace & Messenger
           </span>
         </div>
       </div>

@@ -381,20 +381,20 @@ conversationsRouter.post("/:id/ai-reply", async (c) => {
     .map((m) => `${m.direction === "incoming" ? "Buyer" : "You"}: ${m.body}`)
     .join("\n");
 
-  const systemPrompt = `You are a professional, friendly car sales assistant helping respond to a Facebook Marketplace buyer.
+  const systemPrompt = `You are a professional, friendly car sales assistant responding to a Facebook Marketplace buyer. Your main goal is to schedule a test drive or appointment.
 
 Vehicle: ${conversation.vehicle}${conversation.vehiclePrice ? ` — Listed at ${conversation.vehiclePrice}` : ""}
 Buyer name: ${conversation.buyerName}
 
 Rules:
-- Be warm and helpful, never pushy or robotic
-- Keep replies under 3 sentences, conversational and natural
-- If asked about price: mention the listed price and invite them to come see it
-- If asked about availability: confirm it's available and suggest a test drive
-- If asked about financing: say you work with multiple lenders, best to come in
-- Never make promises about rates, discounts, or guarantees
-- Try to move toward scheduling a visit or getting their phone number
-- Do NOT include "You:" prefix in your reply — just write the reply text directly`;
+- Be warm and helpful, never pushy or robotic. Keep replies under 3 sentences.
+- Always nudge toward scheduling: suggest a test drive, ask when they can come in, or offer a few time slots.
+- If asked about price: mention the listed price and invite them to see it in person.
+- If asked about availability: confirm it's available and suggest scheduling a test drive.
+- If asked about financing: say you work with multiple lenders and suggest they come in to discuss.
+- Never make promises about rates, discounts, or guarantees.
+- If they mention a day or time, confirm it and say you'll save that slot (e.g. "I'll put you down for Saturday at 10am — see you then!").
+- Do NOT include "You:" prefix in your reply — just write the reply text directly.`;
 
   type OpenAICompletionResponse = {
     choices: Array<{ message: { content: string } }>;
@@ -440,6 +440,61 @@ Rules:
 
   return c.json({ data: { reply } });
 });
+
+// POST /api/conversations/:id/schedule-appointment - create appointment from conversation and optional suggested reply
+conversationsRouter.post(
+  "/:id/schedule-appointment",
+  zValidator(
+    "json",
+    z.object({
+      scheduledAt: z.string().min(1),
+      buyerPhone: z.string().optional(),
+      notes: z.string().optional(),
+      setPendingReply: z.boolean().optional().default(true),
+    })
+  ),
+  async (c) => {
+    const userId = getUserId(c);
+    const convId = c.req.param("id");
+    const data = c.req.valid("json");
+
+    const conversation = await prisma.conversation.findFirst({
+      where: { id: convId, userId },
+    });
+    if (!conversation) return c.json({ error: { message: "Not found" } }, 404);
+
+    const scheduledAt = new Date(data.scheduledAt);
+    const appt = await prisma.appointment.create({
+      data: {
+        userId,
+        conversationId: convId,
+        buyerName: conversation.buyerName,
+        buyerPhone: data.buyerPhone ?? conversation.buyerPhone ?? null,
+        vehicle: conversation.vehicle,
+        scheduledAt,
+        notes: data.notes ?? null,
+        status: "scheduled",
+      },
+    });
+
+    if (data.setPendingReply) {
+      const formatted = scheduledAt.toLocaleString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      });
+      const suggestedReply = `I've set a test drive for ${formatted}. See you then! Feel free to message if you need to reschedule.`;
+      await prisma.conversation.update({
+        where: { id: convId },
+        data: { pendingReply: suggestedReply },
+      });
+    }
+
+    return c.json({ data: { appointment: appt } }, 201);
+  }
+);
 
 // Helper: compute intent score from message text
 function computeIntentScore(messageText: string, currentScore: number): number {

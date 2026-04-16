@@ -1,85 +1,49 @@
 import { useState } from 'react';
 import {
   Car,
-  Send,
-  Clock,
   Menu,
   X,
   LayoutDashboard,
-  BarChart3,
-  BadgeDollarSign,
   Users,
+  UserPlus,
   Settings,
-  HelpCircle,
-  Kanban,
   CalendarDays,
+  BarChart3,
 } from 'lucide-react';
-import { VehicleComparisonIcon } from '@/components/icons/VehicleComparisonIcon';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Sidebar } from '@/components/autopost/Sidebar';
-import { PostComposer } from '@/components/autopost/PostComposer';
-import { PostHistory } from '@/components/autopost/PostHistory';
 import { DashboardView } from '@/components/autopost/DashboardView';
-import { SoldView } from '@/components/autopost/SoldView';
 import { LeadsView } from '@/components/autopost/LeadsView';
-import { AnalyticsView } from '@/components/autopost/AnalyticsView';
-import { VehicleComparisonPage } from '@/components/autopost/VehicleComparisonPage';
-import { SupportView } from '@/components/autopost/SupportView';
+import { LeadsListView } from '@/components/autopost/LeadsListView';
 import { SettingsView } from '@/components/autopost/SettingsView';
 import { ConnectInventory } from '@/components/autopost/ConnectInventory';
-import { CrmView } from '@/components/autopost/CrmView';
 import { CalendarView } from '@/components/autopost/CalendarView';
-import { LeadsListView } from '@/components/autopost/LeadsListView';
+import { OnboardingFlow } from '@/components/autopost/OnboardingFlow';
+import { DealerLogicSettings } from '@/components/autopost/DealerLogicSettings';
+import { ListingAnalyticsView } from '@/components/autopost/ListingAnalyticsView';
 import { DealershipProvider, useDealership } from '@/components/autopost/DealershipContext';
 import { FacebookProvider, useFacebook } from '@/components/autopost/FacebookContext';
-import type { ActiveView, Vehicle, PostHistoryItem } from '@/components/autopost/types';
-import { sampleVehicles, samplePostHistory } from '@/components/autopost/types';
+import type { ActiveView } from '@/components/autopost/types';
 
 const mobileNavItems: { view: ActiveView; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { view: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { view: 'dashboard', label: 'Home', icon: LayoutDashboard },
   { view: 'connect-inventory', label: 'Inventory', icon: Car },
-  { view: 'sold', label: 'Sold Vehicles', icon: BadgeDollarSign },
-  { view: 'market-intelligence', label: 'Vehicle Comparison', icon: VehicleComparisonIcon },
-  { view: 'composer', label: 'Post to FB', icon: Send },
-  { view: 'history', label: 'Post History', icon: Clock },
-  { view: 'analytics', label: 'Analytics', icon: BarChart3 },
-  { view: 'leads-list', label: 'Leads', icon: Users },
+  { view: 'listing-analytics', label: 'Analytics', icon: BarChart3 },
   { view: 'leads', label: 'Conversations', icon: Users },
-  { view: 'crm', label: 'CRM Board', icon: Kanban },
-  { view: 'calendar', label: 'Calendar', icon: CalendarDays },
+  { view: 'leads-list', label: 'Leads', icon: UserPlus },
+  { view: 'calendar', label: 'Appointments', icon: CalendarDays },
   { view: 'settings', label: 'Settings', icon: Settings },
-  { view: 'support', label: 'Support', icon: HelpCircle },
 ];
 
 function IndexContent() {
   const { isConnected } = useDealership();
   const { connected: facebookConnected } = useFacebook();
   const [activeView, setActiveView] = useState<ActiveView>(isConnected ? 'dashboard' : 'connect-inventory');
-  const [vehicles, setVehicles] = useState<Vehicle[]>(sampleVehicles);
-  const [postHistory, setPostHistory] = useState<PostHistoryItem[]>(samplePostHistory);
-  const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const handlePostVehicle = (vehicle: Vehicle) => {
-    setSelectedVehicleId(vehicle.id);
-    setActiveView('composer');
-  };
-
-  const handlePosted = (item: PostHistoryItem) => {
-    setPostHistory((prev) => [item, ...prev]);
-    toast.success('Successfully posted to Facebook Marketplace!', {
-      description: `${item.vehicleName} is now live.`,
-      duration: 4000,
-    });
-  };
 
   const handleViewChange = (view: ActiveView) => {
     setActiveView(view);
     setMobileMenuOpen(false);
-    if (view !== 'composer') {
-      setSelectedVehicleId(null);
-    }
   };
 
   return (
@@ -94,6 +58,7 @@ function IndexContent() {
             <Car className="w-4 h-4 text-primary-foreground" />
           </div>
           <span className="font-bebas text-xl tracking-wider text-foreground">AUTOPOST</span>
+          <span className="font-dm text-[10px] text-muted-foreground hidden sm:inline ml-1.5">Marketplace & Messenger</span>
         </div>
         <button
           onClick={() => setMobileMenuOpen((o) => !o)}
@@ -148,44 +113,26 @@ function IndexContent() {
           {activeView === 'dashboard' && (
             <DashboardView onNavigate={handleViewChange} />
           )}
-          {activeView === 'analytics' && (
-            <AnalyticsView vehicles={vehicles} />
+          {activeView === 'onboarding' && (
+            <OnboardingFlow onNavigate={handleViewChange} />
           )}
-          {activeView === 'market-intelligence' && (
-            <div data-view="vehicle-comparison" key="vehicle-comparison">
-              <VehicleComparisonPage vehicles={vehicles} />
-            </div>
-          )}
-          {activeView === 'sold' && (
-            <SoldView vehicles={vehicles} />
-          )}
-          {activeView === 'composer' && (
-            <PostComposer
-              vehicles={vehicles}
-              selectedVehicleId={selectedVehicleId}
-              onPosted={handlePosted}
-            />
-          )}
-          {activeView === 'history' && (
-            <PostHistory history={postHistory} />
-          )}
-          {activeView === 'leads-list' && (
-            <LeadsListView onNavigate={(view) => setActiveView(view as ActiveView)} />
+          {activeView === 'listing-analytics' && (
+            <ListingAnalyticsView onNavigate={handleViewChange} />
           )}
           {activeView === 'leads' && (
             <LeadsView />
           )}
-          {activeView === 'crm' && (
-            <CrmView />
+          {activeView === 'leads-list' && (
+            <LeadsListView />
           )}
           {activeView === 'calendar' && (
             <CalendarView />
           )}
+          {activeView === 'dealer-logic' && (
+            <DealerLogicSettings onNavigate={handleViewChange} />
+          )}
           {activeView === 'settings' && (
             <SettingsView />
-          )}
-          {activeView === 'support' && (
-            <SupportView />
           )}
           {activeView === 'connect-inventory' && (
             <ConnectInventory onConnected={handleViewChange} />

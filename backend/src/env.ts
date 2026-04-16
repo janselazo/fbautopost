@@ -16,6 +16,8 @@ const envSchema = z.object({
   SUPABASE_JWT_SECRET: z.string().optional(),
   // MarketCheck
   MARKETCHECK_API_KEY: z.string().optional(),
+  // OpenAI
+  OPENAI_API_KEY: z.string().optional(),
   // Stripe
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),

@@ -171,3 +171,51 @@ model Lead {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model AutomationConfig {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  enabled           Boolean  @default(false)
+  postingEnabled    Boolean  @default(true)
+  replyEnabled      Boolean  @default(true)
+  postsPerDay       Int      @default(10)
+  postingStartHour  Int      @default(8)
+  postingEndHour    Int      @default(20)
+  replyTone         String   @default("friendly") // friendly | professional | casual
+  replyHoursOnly    Boolean  @default(false)
+  geoZipCodes       String?
+  inventorySyncMins Int      @default(240)
+  dealerWebsite     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model PostingTask {
+  id              String    @id @default(cuid())
+  userId          String
+  vehicleId       Int
+  status          String    @default("queued") // queued | posting | posted | failed | skipped | deleted
+  taskType        String    @default("new") // new | refresh | rotation
+  listingText     String?
+  photoUrls       String?
+  fbListingUrl    String?
+  error           String?
+  attempts        Int       @default(0)
+  messagesReceived Int      @default(0)
+  scheduledFor    DateTime?
+  completedAt     DateTime?
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model BrowserSession {
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  cookies    String
+  userAgent  String?
+  valid      Boolean   @default(true)
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}

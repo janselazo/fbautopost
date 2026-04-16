@@ -113,9 +113,7 @@ export function PostHistory({ history }: PostHistoryProps) {
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
           <FileText className="w-12 h-12 mb-4 opacity-30" />
           <p className="font-dm text-lg">No posts yet</p>
-          <p className="font-dm text-sm mt-1 opacity-70">
-            Start posting vehicles to see your history here
-          </p>
+          <p className="font-dm text-sm text-muted-foreground mt-1">Post from Inventory to Facebook Marketplace to get started.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
